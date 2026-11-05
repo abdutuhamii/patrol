@@ -10,7 +10,10 @@
 
     <body>
         <div id="qr-reader" width="600px"></div>
+        <button id="scan-btn">Scan</button>
+
         <script>
+            
             const html5QrCodeScan = new Html5Qrcode("qr-reader", { formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE], verbose: false});
             
             function onScanSuccess(decodedText, decodedResult) {
@@ -21,8 +24,12 @@
 
             }
 
-            html5QrCodeScan.start( { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure);
+            document.getElementById('scan-btn').addEventListener('click', function() {
+                html5QrCodeScan.start( { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure);
+            })
+            
         </script>
+
     </body>
 
 </html>
