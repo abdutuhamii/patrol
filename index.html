@@ -11,17 +11,17 @@
     <body>
         <div id="qr-reader" width="600px"></div>
         <script>
-            const html5QrCodeScan = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
+            const html5QrCodeScan = new Html5Qrcode("qr-reader", { formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE], verbose: false});
             
             function onScanSuccess(decodedText, decodedResult) {
-                html5QrcodeScanner.clear();
+                html5QrCodeScan.stop();
             }
 
             function onScanFailure(error) {
 
             }
 
-            html5QrCodeScan.render(onScanSuccess, onScanFailure);
+            html5QrCodeScan.start( { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure));
         </script>
     </body>
 
