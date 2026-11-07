@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Trial Patrol: messabzataom</title>
+    <title>Secure Patrol: messabzataom</title>
+    <!-- In-browser QR code scanner engine (Zero backend dependency) -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         :root {
             --primary: #1e3a8a;
@@ -29,58 +31,34 @@
             box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
             box-sizing: border-box;
         }
-        h2 { color: var(--primary); text-align: center; margin: 0 0 16px 0; font-size: 22px; }
-        .target-box {
-            background: #eff6ff;
-            border: 2px dashed #3b82f6;
-            border-radius: 10px;
-            padding: 12px;
-            text-align: center;
-            margin-bottom: 16px;
+        h2 { color: var(--primary); text-align: center; margin: 0 0 14px 0; font-size: 22px; }
+        .badge {
+            display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold;
         }
-        .target-box span {
-            font-size: 13px;
-            color: #1e40af;
-            display: block;
+        .badge-pending { background: #fee2e2; color: var(--danger); }
+        .badge-ok { background: #d1fae5; color: var(--success); }
+        .card {
+            border: 2px solid #e5e7eb; border-radius: 10px; padding: 12px; margin-bottom: 14px; background: #f9fafb;
         }
-        .target-box strong {
-            font-size: 20px;
-            letter-spacing: 1.5px;
-            color: #1e3a8a;
-            font-family: monospace;
-        }
-        .form-group { margin-bottom: 14px; }
-        label { display: block; font-weight: 600; margin-bottom: 6px; color: #374151; font-size: 14px; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-weight: 600; margin-bottom: 5px; color: #374151; font-size: 14px; }
         input, select, textarea {
-            width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; box-sizing: border-box; font-size: 15px;
+            width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px; box-sizing: border-box; font-size: 15px;
         }
-        input:focus, select:focus, textarea:focus { border-color: var(--primary); outline: none; }
-        
-        .camera-viewport {
-            width: 100%;
-            aspect-ratio: 4 / 3;
-            background: #000;
-            border-radius: 12px;
-            overflow: hidden;
-            display: none;
-            border: 2px solid var(--dark);
+        .camera-box {
+            width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: 12px;
+            overflow: hidden; position: relative; display: none; margin-bottom: 10px;
         }
-        video { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .photo-preview {
-            width: 100%;
-            aspect-ratio: 4 / 3;
-            border-radius: 12px;
-            object-fit: cover;
-            display: none;
-            border: 2px solid var(--success);
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .scan-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 60%; height: 60%; border: 2px dashed #10b981; border-radius: 8px;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);
         }
-        canvas { display: none; }
-        
         .btn {
-            background: var(--primary); color: white; border: none; padding: 13px;
-            border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-size: 15px; margin-top: 8px;
+            background: var(--primary); color: white; border: none; padding: 12px;
+            border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-size: 15px; margin-top: 6px;
         }
-        .btn-capture { background: var(--dark); }
         .btn-success { background: var(--success); }
         .btn-success:disabled { background: #9ca3af; cursor: not-allowed; }
         .msg { margin-top: 10px; font-size: 13px; font-weight: 600; text-align: center; }
@@ -91,199 +69,258 @@
 <body>
 
 <div class="dashboard">
-    <h2>🛡️ Site Patrol Verification</h2>
-    
-    <!-- Signage Indicator -->
-    <div class="target-box">
-        <span>Target Signage Code:</span>
-        <strong>messabzataom</strong>
-    </div>
+    <h2>🛡️ Proximity Patrol Guard</h2>
 
     <div class="form-group">
-        <label for="officer-name">Active Duty Officer Name:</label>
-        <input type="text" id="officer-name" placeholder="Enter full name" required>
+        <label for="officer-name">Officer Name:</label>
+        <input type="text" id="officer-name" placeholder="Type your full name" required>
     </div>
 
-    <div class="form-group">
-        <label for="checkpoint-input">Station Checkpoint:</label>
-        <input type="text" id="checkpoint-input" value="Checkpoint: messabzataom" readonly style="background:#f9fafb; font-weight:600;">
-    </div>
-
-    <!-- Live Camera Verification Module -->
-    <div class="form-group">
-        <label>Proximity Check (Stand within 2m & snap the sign):</label>
-        <button type="button" class="btn btn-capture" id="start-cam-btn" onclick="initiateCamera()">Open Verification Camera</button>
-        
-        <div class="camera-viewport" id="viewport-container">
-            <video id="webcam" autoplay playsinline></video>
+    <!-- Verification 1: GPS Geofence Check -->
+    <div class="card" id="gps-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong>1. Location Geofence</strong>
+            <span id="gps-badge" class="badge badge-pending">Waiting</span>
         </div>
-        
-        <img id="captured-snapshot" class="photo-preview" alt="Snapshot Preview">
-        <button type="button" class="btn" id="snap-btn" onclick="executeCapture()" style="display:none;">Snap Point Photo</button>
-        <canvas id="processing-canvas"></canvas>
+        <p style="font-size:12px; color:#6b7280; margin:6px 0;">Target: Point <code>messabzataom</code> (Tolerance: 10m)</p>
+        <button type="button" class="btn" onclick="verifyGPSPresence()">Verify Physical GPS Location</button>
+        <div id="gps-msg" class="msg"></div>
     </div>
 
-    <!-- Questionnaire -->
+    <!-- Verification 2: Camera Code Scanner -->
+    <div class="card" id="cam-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong>2. Physical Code Scanner</strong>
+            <span id="code-badge" class="badge badge-pending">Locked</span>
+        </div>
+        <p style="font-size:12px; color:#6b7280; margin:6px 0;">Scan the physical QR code mounted on the wall.</p>
+
+        <button type="button" class="btn" id="start-cam-btn" onclick="startScanner()" disabled>Activate Checkpoint Scanner</button>
+
+        <div class="camera-box" id="cam-box">
+            <video id="webcam" playsinline></video>
+            <div class="scan-overlay"></div>
+        </div>
+        <canvas id="qr-canvas" style="display:none;"></canvas>
+        <div id="scanner-msg" class="msg"></div>
+    </div>
+
+    <!-- Checkpoint Questionnaire (Locked until both validations succeed) -->
     <form id="submission-form" onsubmit="processLogSubmission(event)">
         <div class="form-group">
-            <label for="condition">Area Status:</label>
+            <label for="condition">Area Condition:</label>
             <select name="condition" id="condition" required>
                 <option value="Secure / All Clear">Secure / All Clear</option>
-                <option value="Maintenance Required">Maintenance Required</option>
-                <option value="Security Exception Noted">Security Exception Noted</option>
+                <option value="Maintenance Flagged">Maintenance Flagged</option>
+                <option value="Security Violation">Security Violation</option>
             </select>
         </div>
         <div class="form-group">
-            <label for="notes">Observations / Notes:</label>
-            <textarea name="notes" id="notes" rows="2" placeholder="Enter site notes..."></textarea>
+            <label for="notes">Observations:</label>
+            <textarea name="notes" id="notes" rows="2" placeholder="Field report notes..."></textarea>
         </div>
-        <button type="submit" class="btn btn-success" id="submit-btn" disabled>Submit (Take Photo to Unlock)</button>
+        <button type="submit" class="btn btn-success" id="submit-btn" disabled>Submit Verified Checkpoint</button>
     </form>
-    
+
     <div id="status-feedback" class="msg"></div>
 </div>
 
 <script>
     // ========================================================
-    // ⚙️ GOOGLE APPS SCRIPT WEB APP URL
-    // Replace with your URL from Deploy -> Web App (must end in /exec)
+    // ⚙️ CONFIGURATION
     // ========================================================
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0UwN_OPDvBuVQPy4AQNQtdEmUDsEKlIOdaUhFIZnqq4XDDbYwDhZLsdYA9lq5BjoaPg/exec";
+    // Replace with your Google Apps Script Web App URL from Step 1
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby7HVGhMFj9Dp8S2vAH9ZwugfdYYP-eYBk1oqoYVPd_IodMvjSGjl_-GaZC_5UlxuHPmQ/exec";
 
-    let activeStream = null;
-    let photoVerificationTag = "";
+    // Expected code value on physical wall
+    const EXPECTED_CODE = "messabzataom";
 
-    function initiateCamera() {
-        const video = document.getElementById('webcam');
-        const viewport = document.getElementById('viewport-container');
-        const snapBtn = document.getElementById('snap-btn');
-        const startBtn = document.getElementById('start-cam-btn');
-        const feedback = document.getElementById('status-feedback');
+    // Target Checkpoint Coordinates
+    const TARGET_LAT = 29.70873;
+    const TARGET_LON = 32.29259;
 
-        feedback.innerText = "";
-        
-        navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } }, 
-            audio: false 
-        })
-        .then(stream => {
-            activeStream = stream;
-            video.srcObject = stream;
-            viewport.style.display = "block";
-            snapBtn.style.display = "block";
-            startBtn.style.display = "none";
-            document.getElementById('captured-snapshot').style.display = "none";
-        })
-        .catch(err => {
-            feedback.className = "msg danger-text";
-            feedback.innerText = "Error: Rear camera access is required to unlock this form.";
-        });
+    // Allowable distance in meters
+    const MAX_ALLOWED_DISTANCE_METERS = 10;
+
+    // State Variables
+    let verifiedGPS = { lat: null, lon: null, accuracy: null, distance: null };
+    let codeVerified = false;
+    let scanStream = null;
+    let scanInterval = null;
+
+    // Haversine Formula: Calculates accurate distance over Earth's curvature
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; // Earth radius in meters
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    function executeCapture() {
-        const video = document.getElementById('webcam');
-        const canvas = document.getElementById('processing-canvas');
-        const context = canvas.getContext('2d');
-        const previewImg = document.getElementById('captured-snapshot');
-        const submitBtn = document.getElementById('submit-btn');
-        const startBtn = document.getElementById('start-cam-btn');
-        const feedback = document.getElementById('status-feedback');
+    // 1. GPS Geofence Verification (Anti-Breakroom Lock)
+    function verifyGPSPresence() {
+        const msg = document.getElementById("gps-msg");
+        const badge = document.getElementById("gps-badge");
+        msg.className = "msg";
+        msg.innerText = "Acquiring precise satellite coordinates...";
 
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        navigator.geolocation.getCurrentPosition((pos) => {
+            const userLat = pos.coords.latitude;
+            const userLon = pos.coords.longitude;
+            const accuracy = Math.round(pos.coords.accuracy);
+            const distance = Math.round(calculateDistance(userLat, userLon, TARGET_LAT, TARGET_LON));
 
-        const base64Data = canvas.toDataURL('image/jpeg', 0.4);
-        previewImg.src = base64Data;
-        previewImg.style.display = "block";
+            verifiedGPS = { lat: userLat, lon: userLon, accuracy: accuracy, distance: distance };
 
-        const timestamp = new Date().toISOString();
-        photoVerificationTag = `[VERIFIED LIVE CAPTURE | Time: ${timestamp} | Hash: ${base64Data.slice(-32)}]`;
+            // Dynamic buffer: Evaluates against 10m while accommodating satellite accuracy drift
+            const effectiveTolerance = Math.max(MAX_ALLOWED_DISTANCE_METERS, accuracy);
 
-        if (activeStream) {
-            activeStream.getTracks().forEach(track => track.stop());
-            activeStream = null;
+            if (distance <= effectiveTolerance) {
+                badge.className = "badge badge-ok";
+                badge.innerText = "Verified ✔️";
+                msg.className = "msg success-text";
+                msg.innerText = `Within range! (${distance}m from target, ±${accuracy}m accuracy).`;
+                document.getElementById("start-cam-btn").disabled = false;
+            } else {
+                badge.className = "badge badge-pending";
+                badge.innerText = "Out of Range";
+                msg.className = "msg danger-text";
+                msg.innerText = `Bypass Block: You are ${distance}m away. Must be within ${MAX_ALLOWED_DISTANCE_METERS}m of messabzataom.`;
+                document.getElementById("start-cam-btn").disabled = true;
+            }
+        }, () => {
+            msg.className = "msg danger-text";
+            msg.innerText = "Location permission denied or GPS unavailable.";
+        }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
+    }
+
+    // 2. Live Video Feed & Real-time QR Code Recognition
+    function startScanner() {
+        const video = document.getElementById("webcam");
+        const camBox = document.getElementById("cam-box");
+        const msg = document.getElementById("scanner-msg");
+
+        navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" },
+            audio: false
+        })
+            .then((stream) => {
+                scanStream = stream;
+                video.srcObject = stream;
+                video.setAttribute("playsinline", true);
+                video.play();
+                camBox.style.display = "block";
+                msg.className = "msg";
+                msg.innerText = "Aim camera directly at the code on the wall...";
+
+                // Scan frames every 200 milliseconds
+                scanInterval = setInterval(scanFrame, 200);
+            })
+            .catch(() => {
+                msg.className = "msg danger-text";
+                msg.innerText = "Camera permission denied.";
+            });
+    }
+
+    // Optical pattern analysis loop
+    function scanFrame() {
+        const video = document.getElementById("webcam");
+        const canvas = document.getElementById("qr-canvas");
+        const context = canvas.getContext("2d");
+        const msg = document.getElementById("scanner-msg");
+        const badge = document.getElementById("code-badge");
+        const submitBtn = document.getElementById("submit-btn");
+
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "dontInvert",
+            });
+
+            if (code) {
+                if (code.data.trim() === EXPECTED_CODE) {
+                    // Code Matched
+                    clearInterval(scanInterval);
+                    if (scanStream) {
+                        scanStream.getTracks().forEach(t => t.stop());
+                    }
+                    document.getElementById("cam-box").style.display = "none";
+
+                    codeVerified = true;
+                    badge.className = "badge badge-ok";
+                    badge.innerText = "Matched ✔️";
+                    msg.className = "msg success-text";
+                    msg.innerText = `Code Verified: "${EXPECTED_CODE}" detected live!`;
+
+                    // Unlock submission button
+                    submitBtn.disabled = false;
+                } else {
+                    msg.className = "msg danger-text";
+                    msg.innerText = `Invalid code detected ("${code.data.substring(0, 15)}..."). Scan messabzataom!`;
+                }
+            }
         }
-        document.getElementById('viewport-container').style.display = "none";
-        document.getElementById('snap-btn').style.display = "none";
-        startBtn.style.display = "block";
-        startBtn.innerText = "Retake Photo";
-
-        submitBtn.disabled = false;
-        submitBtn.innerText = "Submit Checkpoint Log";
-        feedback.className = "msg success-text";
-        feedback.innerText = "Live verification snapshot captured. Form unlocked.";
     }
 
+    // 3. Transmit Validated Record
     function processLogSubmission(event) {
         event.preventDefault();
         const feedback = document.getElementById("status-feedback");
+        const submitBtn = document.getElementById("submit-btn");
         const officerName = document.getElementById("officer-name").value.trim();
-        const checkpoint = document.getElementById("checkpoint-input").value;
         const condition = document.getElementById("condition").value;
         const notes = document.getElementById("notes").value.trim();
 
         if (!officerName) {
             feedback.className = "msg danger-text";
-            feedback.innerText = "Please enter the Officer Name.";
+            feedback.innerText = "Please enter Officer Name.";
             return;
         }
 
-        if (!photoVerificationTag) {
+        if (!codeVerified) {
             feedback.className = "msg danger-text";
-            feedback.innerText = "You must capture a live photo before submitting.";
+            feedback.innerText = "Physical code scan is required.";
             return;
         }
 
         feedback.className = "msg";
-        feedback.innerText = "Acquiring GPS snapshot & saving log...";
+        feedback.innerText = "Recording verified patrol entry in Google Sheets...";
+        submitBtn.disabled = true;
 
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const gpsInfo = `[GPS: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)} ±${Math.round(pos.coords.accuracy)}m]`;
-                sendPayload(officerName, checkpoint, condition, `${gpsInfo} ${photoVerificationTag} Notes: ${notes}`);
-            },
-            () => {
-                sendPayload(officerName, checkpoint, condition, `[GPS: Unavailable/Indoor] ${photoVerificationTag} Notes: ${notes}`);
-            },
-            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-        );
-    }
-
-    function sendPayload(officer, checkpoint, condition, combinedNotes) {
-        const feedback = document.getElementById("status-feedback");
-        const submitBtn = document.getElementById("submit-btn");
-
-        const data = {
-            officer: officer,
-            checkpoint: checkpoint,
+        const dataPayload = {
+            officer: officerName,
+            checkpoint: `Checkpoint: ${EXPECTED_CODE}`,
             condition: condition,
-            notes: combinedNotes
+            latitude: verifiedGPS.lat,
+            longitude: verifiedGPS.lon,
+            accuracy: verifiedGPS.accuracy,
+            distance: verifiedGPS.distance,
+            notes: notes
         };
 
         fetch(SCRIPT_URL, {
             method: "POST",
             mode: "no-cors",
-            headers: {
-                "Content-Type": "text/plain;charset=utf-8"
-            },
-            body: JSON.stringify(data)
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(dataPayload)
         })
-        .then(() => {
-            feedback.className = "msg success-text";
-            feedback.innerText = "✔ Log recorded successfully in your Google Sheet!";
-            
-            document.getElementById("notes").value = "";
-            submitBtn.disabled = true;
-            submitBtn.innerText = "Submit (Take Photo to Unlock)";
-            document.getElementById('captured-snapshot').style.display = "none";
-            document.getElementById('start-cam-btn').innerText = "Open Verification Camera";
-            photoVerificationTag = "";
-        })
-        .catch(() => {
-            feedback.className = "msg danger-text";
-            feedback.innerText = "Submission failed. Please check internet connection.";
-        });
+            .then(() => {
+                feedback.className = "msg success-text";
+                feedback.innerText = "✔ Checkpoint patrol entry successfully recorded!";
+                document.getElementById("notes").value = "";
+                submitBtn.innerText = "Logged Successfully";
+            })
+            .catch(() => {
+                feedback.className = "msg danger-text";
+                feedback.innerText = "Transmission failed. Check internet.";
+                submitBtn.disabled = false;
+            });
     }
 </script>
 </body>
